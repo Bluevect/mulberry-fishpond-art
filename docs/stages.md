@@ -262,6 +262,61 @@ oxfmt src                               # 格式化
 - **首次进入引导**：说明卡 + 收起后的左上角图标，`localStorage` 记住已读。
 - **交互微调**：去掉循环图上的聚焦圈，只高亮箭头；命中范围放大并加「最近环节」兜底。
 
+## 部署到 GitHub Pages
+
+线上地址：https://bluevect.github.io/mulberry-fishpond-art/
+
+项目页挂在 `/<repo>/` 子路径下（这里是 `/mulberry-fishpond-art/`），**所有资源都必须带这个前缀**。
+
+### 之前图片为什么 404
+
+代码里把图片写成了绝对路径 `/assets/xxx.jpg`，浏览器于是去站点根目录找：
+`https://bluevect.github.io/assets/xxx.jpg` —— 404；
+图其实在 `https://bluevect.github.io/mulberry-fishpond-art/assets/xxx.jpg`。
+
+JS / CSS 没出问题，是因为 Vite 会按 `base` 重写 `index.html` 里的引用；
+但**写在 TS 字符串里的路径不会自动加前缀**，所以只有图片挂了。
+
+### 现在的做法
+
+1. **构建 base**（`vite.config.ts`）
+   - `pnpm dev`：固定 `/`，还是 http://localhost:5173/
+   - `pnpm build` / `pnpm preview`：`/<repo>/`，默认取仓库名 `mulberry-fishpond-art`
+   - 换仓库名或绑自定义域名（站点在根路径）时覆盖：`VITE_BASE=/ pnpm build`
+2. **图片路径一律过 `assetUrl()`**（`src/utils/assets.ts`）：
+
+   ```ts
+   import { assetUrl } from '@/utils/assets'
+
+   const media = {
+     src: assetUrl('/assets/mulberry-fishpond-1.jpg'),
+     // 开发环境 → /assets/mulberry-fishpond-1.jpg
+     // 部署之后 → /mulberry-fishpond-art/assets/mulberry-fishpond-1.jpg
+   }
+   ```
+
+   它把 `import.meta.env.BASE_URL` 拼在路径前。**不要再写死 `/assets/...`**，
+   新加图片也走这个函数，否则部署后同样 404。
+
+### 构建与发布
+
+```sh
+pnpm build          # 产物在 dist/，HTML 与图片引用都已带 /mulberry-fishpond-art/ 前缀
+pnpm preview        # 按部署路径本地预览：http://localhost:4173/mulberry-fishpond-art/
+pnpm deploy         # gh-pages 把 dist 推到 gh-pages 分支（Pages 源设为该分支）
+```
+
+发布前自检：打开 preview 地址，确认三张实景图与 favicon 都返回 200，再点开图看弹层。
+
+### 备注
+
+- 目前只有一个路由 `/`，直接访问项目页即可。以后加子路由（如 `/about`）时，
+  GitHub Pages 需要 404 兜底（把 `index.html` 复制一份为 `404.html`），否则刷新子路径会 404。
+- 换仓库名：改 `vite.config.ts` 里的兜底仓库名，或每次构建时 `VITE_BASE=/<新仓库名>/ pnpm build`。
+- 换自定义域名（站点在根路径）：`VITE_BASE=/ pnpm build`。
+- 单测里的 `assets.spec.ts` 覆盖了 base 拼接规则（`/` → `/assets/x.jpg`，`/repo/` → `/repo/assets/x.jpg`），
+  改这块逻辑时先跑它。
+
 ## 下一步
 
 - [ ] 换掉带水印的图，补图源与授权

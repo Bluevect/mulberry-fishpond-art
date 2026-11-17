@@ -17,7 +17,10 @@ import { clamp, inverseLerp, lerp, smoothstep } from '@/utils/math'
  * 素材的来源与授权状态见 README「素材来源」一节（现有三张图带图库水印，仅供内部演示）。
  */
 export interface MediaSpec {
-  /** public/ 下的路径，例如 /assets/xxx.jpg */
+  /**
+   * 图的实际地址。页面组件里用 `assetUrl('/assets/xxx.jpg')` 生成：
+   * 部署到 GitHub Pages 项目页时会自动补上 `/<repo>/` 前缀，不要写死 `/assets/...`。
+   */
   src: string
   /** 标题：弹窗标题，同时作为按钮的无障碍名称 */
   title: string

@@ -258,7 +258,7 @@ progress = travel / (unrollScroll + panScroll)
 
 | 字段 | 必填 | 说明 |
 | --- | --- | --- |
-| `src` | ✓ | `public/assets/` 下的路径（以 `/assets/` 开头） |
+| `src` | ✓ | **必须用 `assetUrl('/assets/xxx.jpg')` 生成**（见 §10），不要写死 `/assets/...` |
 | `title` | ✓ | 弹窗标题，同时是按钮的无障碍名称 |
 | `description` | ✓ | 弹窗正文，一两句话 |
 | `fit` | | 照片用 `cover`（默认，允许裁切）；示意图用 `contain` |
@@ -278,3 +278,15 @@ progress = travel / (unrollScroll + panScroll)
 - 版式决定这块字摆哪：可以靠右、居中、与图对开，块宽控制在页宽的 36%–46%，
   行宽才不会长得难以阅读。
 - 正文不缩进到边框上：`ChapterText` 自带内边距与题头，不要在版式里再包一层框。
+
+## 10. 部署 base（GitHub Pages）
+
+站点是 GitHub Pages 项目页，挂在 `https://<user>.github.io/<repo>/` 下，构建产物的资源路径要带 `/<repo>/`。
+
+- `vite.config.ts`：开发环境 `base` 为 `/`（`pnpm dev` 在根路径）；`build` 与 `preview` 用
+  `/<repo>/`（默认 `mulberry-fishpond-art`），可用 `VITE_BASE` 覆盖。
+- `src/utils/assets.ts` 的 `assetUrl(path)` = `joinBase(import.meta.env.BASE_URL, path)`，
+  负责把 base 拼到 public 资源路径前；`joinBase` 保证不会出现双斜杠。
+- **任何字符串形式的资源路径都必须过 `assetUrl()`**（`MediaSpec.src`、以后的音频/视频同理）；
+  写在 `index.html` 里的 `/favicon.ico` 由 Vite 自动重写，不用管。
+- 改这块逻辑时先跑 `src/__tests__/assets.spec.ts`。

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Chapter, MediaSpec } from '@/data/chapters'
+import { assetUrl } from '@/utils/assets'
 
 import ChapterShell from '../ChapterShell.vue'
 import ChapterText from '../ChapterText.vue'
@@ -7,7 +8,7 @@ import ScrollImage from '../ScrollImage.vue'
 
 /** 壹 · 岛与塘 —— 这一页的图与文字就写在这里。 */
 const media: MediaSpec = {
-  src: '/assets/mulberry-fishpond-2.jpg',
+  src: assetUrl('/assets/mulberry-fishpond-2.jpg'),
   title: '岛与塘',
   description:
     '从高处看，大汕岛被水道围成一整片塘基：一格一格的鱼塘、基围与村落，再远处是顺德的城区楼群。水一涨，这座岛就是最先承压的地方。',

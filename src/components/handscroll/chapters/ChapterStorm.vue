@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Chapter, MediaSpec } from '@/data/chapters'
+import { assetUrl } from '@/utils/assets'
 
 import ChapterShell from '../ChapterShell.vue'
 import ChapterText from '../ChapterText.vue'
@@ -12,7 +13,7 @@ import ScrollImage from '../ScrollImage.vue'
  * 图不再铺满整页当背景，正文也不压在图上。
  */
 const media: MediaSpec = {
-  src: '/assets/mulberry-fishpond-1.jpg',
+  src: assetUrl('/assets/mulberry-fishpond-1.jpg'),
   title: '灾后塘面',
   description:
     '台风与内涝过去之后，塘水一旦缺氧，鱼就会成片翻肚浮上水面。对一户养殖人家来说，这一塘往往就是一整年的收成。',

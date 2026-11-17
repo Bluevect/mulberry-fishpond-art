@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Chapter, MediaSpec } from '@/data/chapters'
+import { assetUrl } from '@/utils/assets'
 
 import ChapterShell from '../ChapterShell.vue'
 import ChapterText from '../ChapterText.vue'
@@ -12,7 +13,7 @@ import ScrollImage from '../ScrollImage.vue'
  * 页宽只有整屏的六成左右，留白收得住，不再空一整页。
  */
 const media: MediaSpec = {
-  src: '/assets/mulberry-fishpond-3.jpg',
+  src: assetUrl('/assets/mulberry-fishpond-3.jpg'),
   title: '江对岸的城市',
   description:
     '从城市一侧的高处望出去：水道、江心沙洲与对岸的天际线挤在同一个画面里。塘基退到远处，城市一点点逼近——这一卷要问的，正是它们还能不能共存。',
