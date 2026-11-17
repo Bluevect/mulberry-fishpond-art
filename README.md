@@ -37,6 +37,7 @@ src/
 │  ├─ ChapterShell.vue           一页的外壳：宽度、序号水印、slot
 │  ├─ ChapterText.vue            正文大块（每页的文字都裹在这一块里）
 │  ├─ ScrollImage.vue            可点击放大的图（色罩 / multiply）
+│  ├─ CycleCanvas.vue            桑基鱼塘循环动画（canvas 手绘，可交互）
 │  ├─ PaperTexture.vue           绢面纹理（内联 SVG 噪点，无图片资源）
 │  ├─ ProgressRail.vue           右侧读卷刻度轨
 │  ├─ SealMark.vue               朱文方印（右下落款）
@@ -45,7 +46,7 @@ src/
 │  └─ chapters/                  四页各自的版式（每页一个文件，自由排版）
 │     ├─ ChapterOpening.vue      壹 · 岛与塘（图文对开）
 │     ├─ ChapterStorm.vue        贰 · 风起水浸（与卷首同一套图文对开）
-│     ├─ ChapterCycle.vue        叁 · 断链与桑基（文字 + 循环图）
+│     ├─ ChapterCycle.vue        叁 · 断链与桑基（文字 + canvas 循环动画）
 │     └─ ChapterColophon.vue     肆 · 落款（文字 + 江对岸的城市，页宽收窄）
 ├─ views/ScrollStoryView.vue     页面装配（把 chapters 交给舞台）
 ├─ styles/tokens.css             设计变量 + 主题色初始值
@@ -99,6 +100,35 @@ progress = travel / (unrollScroll + panScroll)    // 整卷进度
 
 图标是**内联 SVG**，没有引入图标库（这个环境装不了新依赖，内联也离线可用）。
 想换成 remixicon / ElementPlus 的图标，只要替换 `OnboardingHint.vue` 里那一个 `<svg>`。
+
+## 生态循环动画（叁 · 断链与桑基）
+
+原来那张「湖州桑基鱼塘循环模式图」是白底的示意图，跟绢面卷轴的气质差太远，已经不用了。
+现在这一页右侧是 [CycleCanvas.vue](src/components/handscroll/CycleCanvas.vue) 用 canvas 现画的循环场景，
+**构图照原图来，但不画白底**——所有形状都是绢色 / 墨色的半透明笔触，像直接画在卷上：
+
+```
+┌──────────────────────────────────────────┐
+│                 蚕                        │
+│            ╱ ↘                          │
+│   桑 ◯◯ ←─   ╲     ……（蚕沙喂鱼）       │
+│   塘基    ←─  ╲  ┌──────────┐           │
+│  ▁▁▁▁▁      ╲   │  池塘 ～～ │  鱼       │
+│  ▁▁▁▁▁▁▁▁▁▁╲──│          │           │
+│             塘泥 └──────────┘           │
+└──────────────────────────────────────────┘
+```
+
+- 左边一块**塘基**（土坡）+ 两棵**桑树**；右边一片**池塘**（波纹 + 三尾线鱼）；
+  上方是**蚕**（桑叶上的两条小蚕），下方是**塘泥**（塘底挤出来的一团）；
+- 三条箭头串起循环：桑 →蚕（桑叶养蚕）、蚕 →鱼（蚕沙喂鱼）、塘泥 →桑（塘泥肥桑），
+  朱砂粒子沿着箭头流动；
+- 鼠标停在某个环节的**图画或标签字**上（不用点），与它相连的两条箭头就直接变朱砂、加粗，粒子也亮一档；
+  不再额外画聚焦圈；
+- 点画布或下方四枚小签选中该环节，底部给一句解释（小签支持键盘、`aria-live` 播报）；
+- 颜色全部从 CSS 变量读（`--paper` / `--paper-deep` / `--wash` / `--ink` / `--line` / `--seal`），
+  跟着卷轴冷暖一起变；动画只在页面进入视口时跑，离开就停，`prefers-reduced-motion` 下只画静帧；
+  jsdom 里拿不到 `canvas 2d` 上下文时安全降级（不画、不报错）。
 
 ## 怎么往里填内容
 
@@ -186,23 +216,24 @@ const text: readonly string[] = [
 
 ## 素材来源
 
-卷中现有四张图，全部放在 `public/assets/`，由需求方提供；其中三张带图库水印，**仅供内部演示**，
+卷中现在用**三张图**，全部放在 `public/assets/`，由需求方提供；其中两张带图库水印，**仅供内部演示**，
 正式提交前须替换或取得授权。画面水印即来源线索：
 
 | 文件 | 用在哪 | 画面水印 / 原始出处 | 状态 |
 | --- | --- | --- | --- |
 | `mulberry-fishpond-2.jpg` | 壹 · 岛与塘 | 站酷海洛（ID 2239037414） | 待授权，需替换 |
 | `mulberry-fishpond-1.jpg` | 贰 · 风起水浸 | 视觉中国 + 凤凰新闻 | 待授权，需替换 |
-| `mulberry-fishpond-ecosystem-cycle.jpg` | 叁 · 断链与桑基 | 南浔旅游：湖州桑基鱼塘系统生态循环模式图（顺德桑基鱼塘同属这一传统农业形态，弹窗文案已注明） | 待确认转载许可 |
 | `mulberry-fishpond-3.jpg` | 肆 · 落款 | 需求方提供（城市江岸实拍，画面无水印） | 来源待补 |
+| ~~`mulberry-fishpond-ecosystem-cycle.jpg`~~ | 已弃用 | 南浔旅游：湖州桑基鱼塘系统生态循环模式图 | 文件还留在 `public/assets/`，没人引用了，可以删 |
 
-代码里的引用位置：`src/data/chapters.ts` 已不再放图，四张图分别写在
-`chapters/ChapterOpening.vue`、`ChapterStorm.vue`、`ChapterCycle.vue`、`ChapterColophon.vue` 里。
-版权信息不写进卷面文案，只在弹窗正文里保留一句来源交代（循环图那句）。换素材就是替换文件或改组件里的 `src`。
+代码里的引用位置：`src/data/chapters.ts` 已不再放图，三张图分别写在
+`chapters/ChapterOpening.vue`、`ChapterStorm.vue`、`ChapterColophon.vue` 里；
+叁页的循环图换成了 `CycleCanvas.vue` 里用 canvas 现画的动画。
 
 ## 下一步
 
-- [x] 首批实景图入卷 + 点击弹说明（岛与塘 / 灾后塘面 / 桑基鱼塘循环 / 江对岸的城市）
+- [x] 首批实景图入卷 + 点击弹说明（岛与塘 / 灾后塘面 / 江对岸的城市）
+- [x] 叁页的循环图换成 canvas 手绘的可交互循环动画
 - [x] 四页正文（原六页合并为四页，横排、正常阅读顺序）
 - [ ] 换掉带水印的图，补图源与授权
 - [ ] 用 ECharts 做数据图（台风路径、水位、养殖损失——数据来源待定），按版式自由嵌进页面

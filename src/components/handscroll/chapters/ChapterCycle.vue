@@ -1,20 +1,17 @@
 <script setup lang="ts">
-import type { Chapter, MediaSpec } from '@/data/chapters'
+import type { Chapter } from '@/data/chapters'
 
 import ChapterShell from '../ChapterShell.vue'
 import ChapterText from '../ChapterText.vue'
-import ScrollImage from '../ScrollImage.vue'
+import CycleCanvas from '../CycleCanvas.vue'
 
-/** 叁 · 断链与桑基 —— 先讲断在哪儿，再讲它本来怎么转起来。图与文字都写在这里。 */
-const media: MediaSpec = {
-  src: '/assets/mulberry-fishpond-ecosystem-cycle.jpg',
-  title: '桑基鱼塘的循环',
-  description:
-    '桑叶养蚕、蚕沙喂鱼、塘泥肥桑——桑基鱼塘把种植与养殖串成一个闭环：基是缓冲，泥是肥料，水是活的。系统的冗余，正是它面对极端天气时的韧性来源。（图为湖州桑基鱼塘系统的循环模式，顺德桑基鱼塘同属这一传统农业形态。）',
-  fit: 'contain',
-  blend: 'multiply',
-}
-
+/**
+ * 叁 · 断链与桑基
+ *
+ * 先讲断在哪儿，再讲它本来怎么转起来。
+ * 右边不再是那张风格不合的循环图，而是用 canvas 画的循环动画：
+ * 桑 → 蚕 → 鱼 → 泥 → 桑，粒子顺着环流，点一下看这一环是什么意思。
+ */
 const text: readonly string[] = [
   '桑基鱼塘断在哪儿？断在桑不值钱、蚕没人养、泥不再还田；也断在年轻人一批批离开塘基。链条不是一天断的，是一环一环松掉的。',
   '塘基撂荒，塘泥外运，循环就断了一环。断掉的不是某一种作物，而是系统里彼此兜底的那几层：没有桑，蚕就没有饲料；没有泥，基就瘦。',
@@ -25,19 +22,13 @@ const text: readonly string[] = [
 ]
 
 defineProps<{ chapter: Chapter; index: number; active?: boolean }>()
-
-const emit = defineEmits<{
-  'open-media': [media: MediaSpec]
-}>()
 </script>
 
 <template>
   <ChapterShell :chapter="chapter" :index="index" :active="active">
     <div class="cycle">
       <ChapterText class="cycle__text" :text="text" />
-      <div class="cycle__figure">
-        <ScrollImage :media="media" @open-media="emit('open-media', $event)" />
-      </div>
+      <CycleCanvas class="cycle__diagram" />
     </div>
   </ChapterShell>
 </template>
@@ -56,7 +47,7 @@ const emit = defineEmits<{
   justify-self: start;
 }
 
-.cycle__figure {
+.cycle__diagram {
   align-self: stretch;
   min-height: 0;
 }

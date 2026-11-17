@@ -39,8 +39,12 @@ describe('App', () => {
       expect(block.text().length).toBeGreaterThan(40)
     }
 
-    // 四张可点击的图（每页一张）
-    expect(wrapper.findAll('.scroll-image')).toHaveLength(4)
+    // 三张可点击的图（壹 / 贰 / 肆 各一张；叁 是 canvas 循环动画）
+    expect(wrapper.findAll('.scroll-image')).toHaveLength(3)
+
+    // 叁 的循环动画与四个节点小签
+    expect(wrapper.find('.cycle-canvas__art').exists()).toBe(true)
+    expect(wrapper.findAll('.cycle-canvas__chip')).toHaveLength(4)
 
     // 首次进入的引导：左上角常驻一枚说明图标
     expect(wrapper.find('.onboarding__button').exists()).toBe(true)

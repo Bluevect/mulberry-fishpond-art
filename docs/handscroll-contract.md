@@ -18,10 +18,11 @@ src/components/handscroll/
 ├─ ChapterShell.vue         一页的外壳：宽度、色温、序号水印、slot
 ├─ ChapterText.vue          正文大块（每页的文字都裹在这一个块里）
 ├─ ScrollImage.vue          可点击放大的图（含色罩 / multiply）
+├─ CycleCanvas.vue          桑基鱼塘循环动画（canvas 手绘，可交互）
 └─ chapters/
    ├─ ChapterOpening.vue    壹 · 岛与塘（图文对开）
    ├─ ChapterStorm.vue      贰 · 风起水浸（与卷首同一套图文对开）
-   ├─ ChapterCycle.vue      叁 · 断链与桑基（文字 + 循环图）
+   ├─ ChapterCycle.vue      叁 · 断链与桑基（文字 + canvas 循环动画）
    └─ ChapterColophon.vue   肆 · 落款（文字 + 江对岸的城市，页宽收窄）
 ```
 
@@ -150,6 +151,19 @@ defineEmits<{ 'open-media': [media: MediaSpec] }>()
 - 只留一道细边，不再套框；照片叠一层 `--wash` 的 multiply 色罩（跟着章节冷暖变化），
   白底示意图（`blend: 'multiply'`）不加色罩、直接 multiply 吃掉白底。
 
+### `CycleCanvas.vue` —— 循环场景（无 props）
+
+- 用 canvas 手绘桑基鱼塘的循环，**构图照原模式图、但不画白底**：
+  左边塘基 + 桑树、右边池塘（波纹 + 线鱼）、上方蚕、下方塘泥；
+- 三条箭头串起循环：桑→蚕（桑叶养蚕）、蚕→鱼（蚕沙喂鱼）、塘泥→桑（塘泥肥桑），朱砂粒子沿箭头流动；
+- 交互：指针停在某个环节的**图画或标签字**上（命中区 = 一个圆 + 标签字矩形）时，
+  与该环节相连的两条箭头变朱砂、加粗、粒子变亮；**不画聚焦圈**；
+  点画布或下方四枚小签选中，底部 `<p aria-live>` 给解释；小签 hover / focus 也会联动高亮箭头；
+- 颜色每 8 帧从 `getComputedStyle` 读一次 CSS 变量（`--paper` / `--paper-deep` / `--wash` /
+  `--ink` / `--ink-soft` / `--line` / `--seal`），所以它跟着卷轴冷暖变化；**不要在 JS 里写死颜色**；
+- 只在进入视口时跑 rAF（`IntersectionObserver`）；`prefers-reduced-motion` 只画静帧；
+  拿不到 2d context（jsdom）时安全降级；卸载时断开 observer、取消 rAF。
+
 ### `chapters/Chapter*.vue` —— 每页的版式
 
 ```ts
@@ -250,7 +264,8 @@ progress = travel / (unrollScroll + panScroll)
 
 - 交互链路：`ScrollImage` 的按钮 `emit('open-media')` → 版式组件转给舞台 → `openMedia()` →
   `MediaLightbox`；关闭后焦点还回按钮，滚动位置不变。
-- 目前四张图里三张带图库水印，正式提交前需换成有授权的素材或补图源说明。
+- 目前三张图在用，其中两张带图库水印，正式提交前需换成有授权的素材或补图源说明；
+  循环示意图（`mulberry-fishpond-ecosystem-cycle.jpg`）已弃用，改由 `CycleCanvas` 现画。
 
 ## 9. 正文
 

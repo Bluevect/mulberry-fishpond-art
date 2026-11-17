@@ -36,3 +36,10 @@ if (typeof globalThis.requestAnimationFrame === 'undefined') {
   globalThis.cancelAnimationFrame = ((handle: number) =>
     clearTimeout(handle as unknown as NodeJS.Timeout)) as typeof cancelAnimationFrame
 }
+
+// jsdom 没有 canvas 实现，getContext 会打印「Not implemented」并返回 null。
+// 组件本来就按「拿不到 ctx 就不画」处理，这里统一返回 null，保持测试输出干净。
+if (typeof HTMLCanvasElement !== 'undefined') {
+  HTMLCanvasElement.prototype.getContext = (() =>
+    null) as unknown as typeof HTMLCanvasElement.prototype.getContext
+}
