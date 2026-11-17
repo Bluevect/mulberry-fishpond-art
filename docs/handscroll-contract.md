@@ -1,8 +1,11 @@
 # 长卷实现契约
 
-这一版：**每页的版式各自写**，不再有通用的「框阵」。
-`chapters.ts` 只描述每页的内容（宽度、色温、图、正文），排版由
-`components/handscroll/chapters/Chapter*.vue` 每个文件自己决定。
+这一版：**每页的版式与内容都在各自的页面组件里**，不再有通用的「框阵」。
+`chapters.ts` 只留骨架参数（id / 序号 / 宽度 / 色温 / 主题色），
+图、文字、弹窗说明、循环图都写在 `components/handscroll/chapters/Chapter*.vue` 里。
+
+> 想快速了解「现在做了什么、怎么跑」，先看仓库根目录的 `README.md`；
+> 这份文档只讲**改代码时要守的约定**。
 
 ## 1. 结构
 
@@ -37,7 +40,7 @@ src/components/handscroll/
 - 卷面上的文字只有三种：汉字序号、右下落款印章、正文。**不写占位文案**；
   图片说明只在点击后的弹层里出现。另有一个视觉隐藏的 `<h1>`（`ScrollStoryView`），
   供读屏与搜索引擎，舞台用 `aria-labelledby="story-title"` 指向它。
-- 图片只允许通过 `Chapter.media` 从 `public/assets/` 引入（见 §8），不写死在模板里。
+- 图片在页面组件里声明 `MediaSpec`，只从 `public/assets/` 引入（见 §8），不写死在模板字符串里。
 - 主题色只能通过 `var(--paper)` / `var(--wash)` / `var(--ink)` … 读取，
   **不要在自己组件里写死颜色**；唯一例外是 `--seal`（朱砂，恒定）。
 - 每个 SFC 用 `<style scoped>`；跨组件共享的量一律走 `tokens.css` 的变量。
@@ -174,7 +177,7 @@ defineEmits<{ 'open-media': [media: MediaSpec] }>()   // 有图时才有
 - 都包在 `<ChapterShell>` 里，版式各自写；**不要**再引入通用的框阵。
 - 现有四页手法：图文对开（壹/贰/肆）、文字与图并置（叁）；
   不同的图幅比例与留白节奏。
-- 需要加新页：在 `chapters.ts` 加数据 + 在 `chapters/` 加版式 + 在
+- 需要加新页：在 `chapters.ts` 补一行骨架参数 + 在 `chapters/` 新建版式组件 + 在
   `HandscrollStage` 的 `CHAPTER_VIEWS` 注册。
 
 ### `PaperTexture.vue`
