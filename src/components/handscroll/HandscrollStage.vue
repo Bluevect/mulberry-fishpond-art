@@ -9,16 +9,37 @@
  *   - 本组件只在模板里绑一个离散状态 activeIndex（章节提亮、刻度轨高亮）。
  */
 
-import { ref } from 'vue'
+import { ref, type Component } from 'vue'
 
-import type { Chapter } from '@/data/chapters'
+import type { Chapter, MediaSpec } from '@/data/chapters'
 import { useHandscrollProgress } from '@/composables/useHandscrollProgress'
 
-import ChapterPanel from '@/components/handscroll/ChapterPanel.vue'
+import MediaLightbox from '@/components/handscroll/MediaLightbox.vue'
+import OnboardingHint from '@/components/handscroll/OnboardingHint.vue'
 import PaperTexture from '@/components/handscroll/PaperTexture.vue'
 import ProgressRail from '@/components/handscroll/ProgressRail.vue'
 import ScrollRoller from '@/components/handscroll/ScrollRoller.vue'
 import SealMark from '@/components/handscroll/SealMark.vue'
+
+import ChapterColophon from '@/components/handscroll/chapters/ChapterColophon.vue'
+import ChapterCycle from '@/components/handscroll/chapters/ChapterCycle.vue'
+import ChapterOpening from '@/components/handscroll/chapters/ChapterOpening.vue'
+import ChapterStorm from '@/components/handscroll/chapters/ChapterStorm.vue'
+
+/**
+ * 章节 id → 版式组件。
+ * 每一页的排版是各自写的，舞台只负责把数据塞进去、把点击事件接住。
+ */
+const CHAPTER_VIEWS: Record<string, Component> = {
+  opening: ChapterOpening,
+  storm: ChapterStorm,
+  cycle: ChapterCycle,
+  colophon: ChapterColophon,
+}
+
+function chapterView(id: string): Component {
+  return CHAPTER_VIEWS[id] ?? ChapterOpening
+}
 
 const props = defineProps<{
   chapters: readonly Chapter[]
@@ -28,6 +49,17 @@ const rootEl = ref<HTMLElement | null>(null)
 const stageEl = ref<HTMLElement | null>(null)
 const bandEl = ref<HTMLElement | null>(null)
 const stripEl = ref<HTMLElement | null>(null)
+
+/** 当前弹窗里的图；null 表示弹窗关闭。 */
+const activeMedia = ref<MediaSpec | null>(null)
+
+function openMedia(media: MediaSpec): void {
+  activeMedia.value = media
+}
+
+function closeMedia(): void {
+  activeMedia.value = null
+}
 
 const { activeIndex, reducedMotion } = useHandscrollProgress(
   { root: rootEl, stage: stageEl, band: bandEl, strip: stripEl },
@@ -55,12 +87,15 @@ const { activeIndex, reducedMotion } = useHandscrollProgress(
           <div class="handscroll__paper">
             <!-- 横向长条：宽度为所有章节之和，由 --pan 整体左移 -->
             <div ref="stripEl" class="handscroll__strip">
-              <ChapterPanel
+              <!-- 每页一个版式组件：排版各写各的，数据从这里灌下去 -->
+              <component
+                :is="chapterView(chapter.id)"
                 v-for="(chapter, index) in chapters"
                 :key="chapter.id"
                 :chapter="chapter"
                 :index="index"
                 :active="index === activeIndex"
+                @open-media="openMedia"
               />
             </div>
             <PaperTexture class="handscroll__texture" />
@@ -82,6 +117,13 @@ const { activeIndex, reducedMotion } = useHandscrollProgress(
         <SealMark />
       </div>
     </div>
+
+    <!-- 首次进入的阅读提示：收起时是左上角一枚说明图标 -->
+    <OnboardingHint />
+
+    <!-- 图片说明弹窗：挂在根节点上（不在 stage 里），
+         这样 position: fixed 不受舞台的 overflow 影响，又能继承主题色变量 -->
+    <MediaLightbox :media="activeMedia" @close="closeMedia" />
   </section>
 </template>
 
@@ -206,7 +248,10 @@ const { activeIndex, reducedMotion } = useHandscrollProgress(
 .handscroll__paper {
   position: absolute;
   inset: 0;
+  /* clip 而不是 hidden：hidden 是可编程滚动的容器，Tab 到画面外的图时浏览器会
+     把 scrollLeft 改掉，长条的 translate 就跟进度对不上了。clip 不允许滚动。 */
   overflow: hidden;
+  overflow: clip;
   background: linear-gradient(
     180deg,
     color-mix(in oklab, var(--paper) 86%, var(--silk)) 0%,

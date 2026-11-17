@@ -4,9 +4,10 @@
 
 滚动不是往下刷页面，而是**把一卷画轴横向展开**：画带钉在视口里，纵向滚动驱动它向左平移；卷首从合拢的一束卷轴开始，缓缓展开；主色调随之从灾后的灰蓝过渡到桑基的翠绿，最后在落款处收束。
 
-> **当前进度：骨架版。**
-> 没有文案、没有图片，版面上只有「框」。所有框都按最终的版面关系摆好了位置，
-> 后续只需要往框里填内容，不需要改滚动逻辑和组件结构。
+> **当前进度：内容版。**
+> 四页各自的版式、四张图、每页一个正文大块都已入卷，点图可弹出说明。
+> 台风 / 洪涝的实测数据还没接；改文案、换图直接在 `chapters/` 下对应页面的组件里改，
+> `src/data/chapters.ts` 只放「每页多宽、什么色温」这类骨架参数。
 
 ## 快速开始
 
@@ -25,23 +26,32 @@ pnpm format     # oxfmt
 
 ```
 src/
-├─ data/chapters.ts              长卷的「内容结构」：六章的宽度、色温、主题色、版面空框
+├─ data/chapters.ts              长卷的「骨架参数」：每页的宽度、色温、主题色（不含内容）
 ├─ utils/color.ts                OKLab 色彩插值（灰蓝 → 翠绿不能走 sRGB，会发脏）
 ├─ utils/math.ts                 clamp / lerp / 缓动
 ├─ composables/
 │  └─ useHandscrollProgress.ts   滚动 → 进度的映射、测量、逐帧写 CSS 变量
 ├─ components/handscroll/
-│  ├─ HandscrollStage.vue        舞台：跑道、视口、画带、裁剪、主题色
+│  ├─ HandscrollStage.vue        舞台：跑道、视口、画带、裁剪、主题色、章节分发
 │  ├─ ScrollRoller.vue           木轴 + 卷束（纯 CSS 圆柱）
-│  ├─ ChapterPanel.vue           一章的版面：按百分比摆放空框 + 汉字序号
-│  ├─ InkFrame.vue               五类空框（图 / 插图 / 文字界格 / 注记 / 数据）
+│  ├─ ChapterShell.vue           一页的外壳：宽度、序号水印、slot
+│  ├─ ChapterText.vue            正文大块（每页的文字都裹在这一块里）
+│  ├─ ScrollImage.vue            可点击放大的图（色罩 / multiply）
 │  ├─ PaperTexture.vue           绢面纹理（内联 SVG 噪点，无图片资源）
 │  ├─ ProgressRail.vue           右侧读卷刻度轨
-│  └─ SealMark.vue               朱文方印
+│  ├─ SealMark.vue               朱文方印（右下落款）
+│  ├─ MediaLightbox.vue          图片说明弹层（点实景图打开）
+│  ├─ OnboardingHint.vue         首次进入的说明卡（收起成左上角图标）
+│  └─ chapters/                  四页各自的版式（每页一个文件，自由排版）
+│     ├─ ChapterOpening.vue      壹 · 岛与塘（图文对开）
+│     ├─ ChapterStorm.vue        贰 · 风起水浸（与卷首同一套图文对开）
+│     ├─ ChapterCycle.vue        叁 · 断链与桑基（文字 + 循环图）
+│     └─ ChapterColophon.vue     肆 · 落款（文字 + 江对岸的城市，页宽收窄）
 ├─ views/ScrollStoryView.vue     页面装配（把 chapters 交给舞台）
 ├─ styles/tokens.css             设计变量 + 主题色初始值
 └─ styles/base.css               重置与页面底色
-docs/handscroll-contract.md      三方实现契约（DOM / CSS 变量 / 组件 API / 滚动映射）
+docs/handscroll-contract.md      实现契约（结构 / CSS 变量 / 组件 API / 滚动映射）
+public/assets/                   实景图与示意图（mulberry-fishpond-*.jpg）
 ```
 
 ## 长卷是怎么动起来的
@@ -69,28 +79,90 @@ progress = travel / (unrollScroll + panScroll)    // 整卷进度
 模板因此不会在滚动时重新渲染，只有「当前是第几章」这种离散状态才用 `ref`。
 读代码时请留意这条约定，新加动画请沿用。
 
+## 点击看图
+
+带图的页面里，图整块是热区，点开后是一层「画片」弹窗：左边原图，右边标题与一段说明。
+
+- 关闭方式：右上角朱砂钮 / `Esc` / 点遮罩。
+- 打开时焦点移到关闭钮，关闭后还回触发它的按钮；`Tab` 在弹层内循环。
+- 打开期间滚轮与触摸不透到长卷；关掉后仍停在原来的阅读位置。
+- 弹窗继承舞台的主题色变量，所以它在卷首是灰蓝、在卷尾是桑叶绿。
+
+## 首次进入的引导
+
+第一次打开时，左上角会展开一张「如何读这卷」的说明卡（延后 0.9s，等开卷动画起手）：
+
+- 说明三件事：向下滚动展开画卷、点图看说明（`Esc` 关闭）、右侧刻度是读到第几页；
+- 关掉之后**收成左上角一枚说明图标**，随时可以再点开；
+- 是否读过记在 `localStorage`（`mulberry-handscroll:onboarding-seen`），之后再进不自动弹；
+  隐私模式下读写失败会退化成每次都提示。
+
+图标是**内联 SVG**，没有引入图标库（这个环境装不了新依赖，内联也离线可用）。
+想换成 remixicon / ElementPlus 的图标，只要替换 `OnboardingHint.vue` 里那一个 `<svg>`。
+
 ## 怎么往里填内容
 
-只需要改 `src/data/chapters.ts`：
+**文字、图、弹窗说明都直接写在各自的页面组件里**（`components/handscroll/chapters/Chapter*.vue`），
+想改哪一页就打开哪个文件；`src/data/chapters.ts` 只留骨架参数。
+
+`chapters.ts` 里每页只有一行：
 
 ```ts
-{
-  id: 'flood',
-  ordinal: '叁',
-  span: 136,                    // 本章占多宽（vw），决定叙事节奏
-  tone: 0.12,                   // 色温：0 = 灾后灰蓝，1 = 桑基翠绿
-  palette: FLOOD,               // 本章中心处的主题色
-  frames: [
-    { kind: 'figure', x: 4, y: 10, w: 40, h: 80 },   // 位置即画布百分比
-    { kind: 'text',   x: 50, y: 12, w: 14, h: 58, columns: 2 },
-  ],
-}
+{ id: 'storm', ordinal: '贰', span: 140, tone: 0.12, palette: FLOOD }
 ```
 
-`frames` 现在是空框。接内容时有两条路：
+| 字段 | 作用 |
+| --- | --- |
+| `id` | 用来选版式组件（`HandscrollStage` 的 `CHAPTER_VIEWS`） |
+| `ordinal` | 卷上序号（壹贰叁肆），只做版面装饰 |
+| `span` | 这一页占多宽（vw），决定滚动节奏 |
+| `tone` / `palette` | 这一页的色温与主题色，跨页时在 OKLab 里插值 |
 
-1. **保持数据驱动**：给 `FrameSpec` 加 `src` / `content` 字段，由 `ChapterPanel` 传给 `InkFrame`；
-2. **给 `InkFrame` 开具名插槽**（`<template #figure>`），把图/文直接写在 `ChapterPanel` 里。
+这些参数必须集中在一张表里，因为滚动距离、章节边界和冷暖过渡都要跨页计算。
+
+### 一页的内容写在组件里
+
+比如 [ChapterStorm.vue](src/components/handscroll/chapters/ChapterStorm.vue)：
+
+```ts
+// 这一页的图与文字就写在这里
+const media: MediaSpec = {
+  src: '/assets/mulberry-fishpond-1.jpg',
+  title: '灾后塘面',              // 弹窗标题（也是按钮的无障碍名）
+  description: '台风与内涝过去之后……', // 弹窗正文
+  fit: 'cover',                  // 照片 cover；示意图用 contain
+  position: 'center 55%',        // 只对 cover：裁切重心
+}
+
+const text: readonly string[] = [
+  '台风从南海上来……',           // 一个元素 = 一个自然段
+  '一塘鱼，就是一户人家一整年的收成……',
+]
+```
+
+`media` 的几条约定：
+
+- **照片**用 `fit: 'cover'` 铺满，允许裁切，`position` 控制留哪一段；
+  **示意图**用 `fit: 'contain'`，别把标注裁掉。
+- **白底图**加 `blend: 'multiply'`，白底会被绢面吃掉，图就像印上去的。
+- 照片会自动叠一层当前页的 `--wash` 色罩，所以同一张图在卷首偏灰蓝、在卷尾偏桑绿。
+- 图能点开说明，所以 `title` / `description` 必填。
+
+### 正文：一个大块
+
+每页的正文由 `ChapterText` 渲染成**一整块**（绢底 + 双层细边 + 朱砂题头），
+横排、首行缩进两字、两端对齐；文字就是组件里的那个 `text` 段落数组。
+
+- 单段 10–200 字；一页 2–6 段比较好看。
+- 版式决定这块字摆哪：可以靠右（贰）、居中（肆）、与图对开（壹/叁）；
+  块宽别超过页宽的 46%，否则一行太长。
+- 想让某页文字更多：往数组里加段落即可，块会自然变高；版面留白跟着变。
+
+### 加一页 / 改一页的版式
+
+1. `chapters.ts` 里加一条骨架参数（`id` 要唯一）；
+2. 在 `chapters/` 下新建 `Chapter<名字>.vue`：内容（`media` / `text`）和排版都写在里面；
+3. 到 `HandscrollStage.vue` 的 `CHAPTER_VIEWS` 里登记 `id → 组件`。
 
 章与章之间的色温过渡、卷轴展开、进度轨都**不需要动**。
 
@@ -98,9 +170,13 @@ progress = travel / (unrollScroll + panScroll)    // 整卷进度
 
 - 主题色只能通过 `var(--paper)` / `var(--wash)` / `var(--ink)` / `var(--line)` … 读取；
   唯一恒定的例外是朱砂 `--seal`。
-- 不引入图片与网络字体：纹理用内联 SVG，卷轴用 CSS 渐变，字体走系统宋/楷栈。
+- 网络字体、第三方动画库一律不引：纹理用内联 SVG，卷轴用 CSS 渐变，字体走系统宋/楷栈；
+  图片只从 `public/assets/` 按数据引入。
 - 尊重 `prefers-reduced-motion`：开卷动画阶跃完成，保留滚动平移。
-- 页面上除了汉字序号和印章单字，不出现任何文字；无障碍标题由 `ScrollStoryView` 里一个视觉隐藏的 `<h1>` 提供。
+- 卷面文字只有三种：汉字序号、右下落款印章，以及横排正文；不写占位文案。
+  无障碍标题由 `ScrollStoryView` 里一个视觉隐藏的 `<h1>` 提供。
+- 图标一律内联 SVG，不引图标库（离线可用、体积可控）。
+- 目前的实景图带图库水印，正式提交前要换成有授权的素材或补图源。
 
 ## 调试
 
@@ -108,12 +184,31 @@ progress = travel / (unrollScroll + panScroll)    // 整卷进度
   生产构建里这个参数会被忽略。
 - 右侧刻度轨显示当前落在第几章；`--tone` 可以在 DevTools 里改，观察配色联动。
 
-## 下一步（骨架之后）
+## 素材来源
 
-- [ ] 补六章的实际图文素材与图注（城市区位、台风路径、内涝范围、断链示意、塘基循环、启示）
-- [ ] 数据框接真实指标（水位、盐度、鱼塘损失、基塘面积变化）
-- [ ] 移动端版面细调（章节最小宽度、竖排界格栏数随宽度变化）
-- [ ] 可选的「点击刻度轨跳章」
+卷中现有四张图，全部放在 `public/assets/`，由需求方提供；其中三张带图库水印，**仅供内部演示**，
+正式提交前须替换或取得授权。画面水印即来源线索：
+
+| 文件 | 用在哪 | 画面水印 / 原始出处 | 状态 |
+| --- | --- | --- | --- |
+| `mulberry-fishpond-2.jpg` | 壹 · 岛与塘 | 站酷海洛（ID 2239037414） | 待授权，需替换 |
+| `mulberry-fishpond-1.jpg` | 贰 · 风起水浸 | 视觉中国 + 凤凰新闻 | 待授权，需替换 |
+| `mulberry-fishpond-ecosystem-cycle.jpg` | 叁 · 断链与桑基 | 南浔旅游：湖州桑基鱼塘系统生态循环模式图（顺德桑基鱼塘同属这一传统农业形态，弹窗文案已注明） | 待确认转载许可 |
+| `mulberry-fishpond-3.jpg` | 肆 · 落款 | 需求方提供（城市江岸实拍，画面无水印） | 来源待补 |
+
+代码里的引用位置：`src/data/chapters.ts` 已不再放图，四张图分别写在
+`chapters/ChapterOpening.vue`、`ChapterStorm.vue`、`ChapterCycle.vue`、`ChapterColophon.vue` 里。
+版权信息不写进卷面文案，只在弹窗正文里保留一句来源交代（循环图那句）。换素材就是替换文件或改组件里的 `src`。
+
+## 下一步
+
+- [x] 首批实景图入卷 + 点击弹说明（岛与塘 / 灾后塘面 / 桑基鱼塘循环 / 江对岸的城市）
+- [x] 四页正文（原六页合并为四页，横排、正常阅读顺序）
+- [ ] 换掉带水印的图，补图源与授权
+- [ ] 用 ECharts 做数据图（台风路径、水位、养殖损失——数据来源待定），按版式自由嵌进页面
+- [ ] 正文按研究结论再校一遍（现在的文案是叙述性的，还没有具体数据支撑）
+- [ ] 移动端版面细调（正文行宽与字号随屏宽、章节最小宽度）
+- [ ] 可选的「点击刻度轨跳章」「键盘左右键翻章」
 - [ ] 全卷末尾补一个向下滚动的落款区
 
 ## 附：模板与 IDE
